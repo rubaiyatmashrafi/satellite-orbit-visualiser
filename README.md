@@ -99,9 +99,9 @@ the same folder as the script.
 
 ## Methodology notes
 
-- Two-body problem only — no J2 perturbations, no atmospheric drag
-- Coplanar transfers — all orbits in the equatorial plane (Z = 0)
-- Impulsive burns — instantaneous velocity changes at burn points
+- Two-body problem only - no J2 perturbations, no atmospheric drag
+- Coplanar transfers - all orbits in the equatorial plane (Z = 0)
+- Impulsive burns - instantaneous velocity changes at burn points
 - Transfer ellipse oriented with periapsis on the +X axis
 
 ---
