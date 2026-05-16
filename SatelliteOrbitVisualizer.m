@@ -1,34 +1,24 @@
-% =========================================================================
 % SatelliteOrbitVisualizer.m
-% =========================================================================
+
 % DESCRIPTION:
 %   Animates a satellite performing a Hohmann or bi-elliptic orbital
 %   transfer in 3D. Displays Earth, initial orbit, transfer arcs, final
 %   orbit, and a live numeric overlay with delta-V and timing metrics.
-%
+
 % USAGE:
 %   Run directly:
 %       >> SatelliteOrbitVisualizer
-%
+
 % REQUIREMENTS:
 %   Base MATLAB only (no toolboxes).
 %   Optional: place "earth_texture.jpg" (equirectangular) in the same
 %   folder for a textured Earth sphere; falls back to solid blue.
-%
+
 % PRESETS (selectable from GUI):
 %   LEO -> GTO  : h1=400  km, h2=35786 km
 %   LEO -> GEO  : h1=400  km, h2=35786 km  (same destination, circularised)
 %   LEO -> MEO  : h1=400  km, h2=20200 km  (GPS-like orbit)
-%
-% FIXES APPLIED:
-%   FIX 1 — Animation starts at the burn point with a short 90-deg lead-in
-%            arc.  The satellite no longer swings through the bottom half of
-%            orbit 1 before the first burn, which previously made it look
-%            like it was heading back toward Earth.
-%   FIX 2 — Bi-elliptic second arc now uses nu = pi -> 2*pi (descending,
-%            apoapsis -> periapsis) instead of the wrong ascending half.
-%   FIX 3 — Legend added to the 3-D axes for instant colour-code clarity.
-%
+
 % MATH REFERENCE  (two-body, coplanar, impulsive burns, SI-km):
 %   Constants:  mu = 398600.4418 km^3/s^2,  Re = 6378.137 km
 %   vc(r)     = sqrt(mu/r)                    circular speed
@@ -39,21 +29,19 @@
 %   dV2       = vc2  - vt_a                   2nd burn delta-V
 %   tt        = pi*sqrt(at^3/mu)              transfer time (half-period)
 %   epsilon   = -mu/(2*a)                     specific orbital energy
-%
-% =========================================================================
 
 function SatelliteOrbitVisualizer()
 
-    %% --- Physical constants ------------------------------------------------
+    %% Physical constants 
     mu = 398600.4418;   % Earth gravitational parameter [km^3/s^2]
     Re = 6378.137;      % Earth equatorial radius       [km]
 
-    %% --- Default mission parameters ----------------------------------------
+    %% Default mission parameters 
     h1     = 400;       % Initial orbit altitude [km]  (LEO)
     h2     = 35786;     % Final orbit altitude   [km]  (GEO)
     rb_fac = 2.0;       % Bi-elliptic: intermediate radius = rb_fac * r2
 
-    %% --- Colour theme -------------------------------------------------------
+    %% Colour theme 
     C.bgFig    = [0.03 0.04 0.08];
     C.bgAxes   = [0.01 0.02 0.05];
     C.bgPanel  = [0.06 0.08 0.14];
@@ -68,13 +56,13 @@ function SatelliteOrbitVisualizer()
     C.statusOK  = [0.70 0.92 1.00];
     C.statusRun = [1.00 0.90 0.45];
 
-    % Line colours used for orbit plots (also drives the legend)
+    % Line colours used for orbit plots
     COL_ORBIT1    = [0.35 0.75 1.00];   % cyan-blue  : initial orbit
     COL_ORBIT2    = [0.25 0.90 0.45];   % green      : final orbit
     COL_TRANSFER  = [1.00 0.65 0.10];   % orange     : 1st transfer arc
     COL_TRANSFER2 = [1.00 0.30 0.60];   % pink-red   : 2nd arc (bi-elliptic)
 
-    %% --- Build figure -------------------------------------------------------
+    %% Build figure 
     fig = figure( ...
         'Name','Satellite Orbit & Transfer Visualizer', ...
         'NumberTitle','off', ...
@@ -85,7 +73,7 @@ function SatelliteOrbitVisualizer()
         'Renderer','opengl', ...
         'CloseRequestFcn',@onClose);
 
-    %% --- 3-D axes -----------------------------------------------------------
+    %% 3-D axes 
     ax = axes('Parent',fig, ...
         'Units','normalized', ...
         'Position',[0.02 0.05 0.60 0.90], ...
@@ -109,7 +97,7 @@ function SatelliteOrbitVisualizer()
     title(ax,'3D Orbit Transfer Visualization', ...
         'Color',C.text,'FontWeight','bold','FontSize',14);
 
-    %% --- Starfield ----------------------------------------------------------
+    %% Starfield 
     rng(2);
     nStars = 1000;
     starScale = 1.8e5;
@@ -121,7 +109,7 @@ function SatelliteOrbitVisualizer()
         'MarkerFaceAlpha',0.55, ...
         'MarkerEdgeAlpha',0.55);
 
-    %% --- Earth sphere -------------------------------------------------------
+    %% Earth sphere
     [sx,sy,sz] = sphere(96);
     sx = sx*Re; sy = sy*Re; sz = sz*Re;
     texFile = 'earth_texture.jpg';
@@ -147,7 +135,6 @@ function SatelliteOrbitVisualizer()
     light(ax,'Position',[ 2  1  3]*1e5,'Style','infinite','Color',[1.00 0.98 0.90]);
     light(ax,'Position',[-1 -2 -2]*1e5,'Style','infinite','Color',[0.07 0.08 0.15]);
 
-    %% --- Persistent graphics handles (updated in drawOrbits) ---------------
     gh.orbit1 = plot3(ax,NaN,NaN,NaN, ...
         'Color',COL_ORBIT1,'LineWidth',1.8,'LineStyle','-');
 
@@ -175,9 +162,6 @@ function SatelliteOrbitVisualizer()
     gh.burnMark3 = plot3(ax,NaN,NaN,NaN,'s', ...
         'MarkerSize',9,'MarkerFaceColor',[1 0.10 0.65],'MarkerEdgeColor','w');
 
-    % FIX 3: Persistent legend so viewers instantly know what each line means.
-    % Created once here; the line handles are stable so the legend updates
-    % automatically whenever their XData/YData/ZData changes.
     gh.leg = legend(ax, ...
         [gh.orbit1, gh.transfer, gh.transfer2, gh.orbit2], ...
         {'Initial orbit (r_1)', ...
@@ -190,7 +174,7 @@ function SatelliteOrbitVisualizer()
         'Location',  'southwest', ...
         'FontSize',  9);
 
-    %% --- Right-side panel layout --------------------------------------------
+    %% Right-side panel layout
     rightX = 0.64;
     rightW = 0.34;
 
@@ -232,7 +216,7 @@ function SatelliteOrbitVisualizer()
         'BorderType','line','ForegroundColor',C.edge,'HighlightColor',C.edge, ...
         'Title','  Controls  ','FontSize',11,'FontWeight','bold');
 
-    %% --- Slider helper function (nested) ------------------------------------
+    %% Slider helper function 
     bgCol = C.bgPanel;
     lbCol = C.label;
 
@@ -308,21 +292,15 @@ function SatelliteOrbitVisualizer()
         'BackgroundColor',C.button2,'ForegroundColor','white', ...
         'Callback',@onAnimate);
 
-    %% --- Slider live-update callbacks ---------------------------------------
+    %%Slider live-update callbacks
     set(slH1,'Callback',@(s,~) onSlide(s,lblH1,'%.0f'));
     set(slH2,'Callback',@(s,~) onSlide(s,lblH2,'%.0f'));
     set(slRb,'Callback',@(s,~) onSlide(s,lblRb,'%.2f'));
     set(modePopup,'Callback',@(~,~) refreshScene());
 
-    %% --- Initial draw -------------------------------------------------------
     refreshScene();
 
-    % =========================================================================
-    %  SCENE ORCHESTRATION
-    % =========================================================================
-
     function refreshScene()
-    % Called on any parameter change. Recomputes and redraws everything.
         [h1_,h2_,mode_,rb_] = readUI();
         data = computeOrbits(h1_,h2_,mu,Re,mode_,rb_);
         drawOrbits(data);
@@ -374,9 +352,7 @@ function SatelliteOrbitVisualizer()
         delete(fig);
     end
 
-    % =========================================================================
     %  ORBIT COMPUTATION
-    % =========================================================================
 
     function data = computeOrbits(h1_,h2_,mu_,Re_,mode_,rb_fac_)
     % Computes all orbital parameters and pre-builds trajectory arrays.
@@ -385,7 +361,7 @@ function SatelliteOrbitVisualizer()
     % The transfer ellipse is oriented with periapsis on the +X axis:
     %   nu = 0   -> satellite at r_perigee  (positive X)
     %   nu = pi  -> satellite at r_apogee   (negative X)
-    % -----------------------------------------------------------------------
+
         r1  = Re_ + h1_;
         r2  = Re_ + h2_;
         vc1 = sqrt(mu_/r1);   % circular speed at r1 [km/s]
@@ -397,9 +373,7 @@ function SatelliteOrbitVisualizer()
         data.mode = mode_;
         data.mu   = mu_;
 
-        % ------------------------------------------------------------------
         if strcmp(mode_,'Hohmann')
-        % ------------------------------------------------------------------
             at  = (r1 + r2)/2;               % transfer ellipse semi-major axis
             vtp = sqrt(mu_*(2/r1 - 1/at));   % speed at perigee of transfer (= r1)
             vta = sqrt(mu_*(2/r2 - 1/at));   % speed at apogee  of transfer (= r2)
@@ -420,7 +394,7 @@ function SatelliteOrbitVisualizer()
             data.epsilon2 = -mu_/(2*r2);
             data.epsilonT = -mu_/(2*at);
 
-            % --- Geometry --------------------------------------------------
+            % Geometry
             theta = linspace(0, 2*pi, 360);
             data.orbit1XYZ    = circOrbitXYZ(r1, theta);
             data.orbit2XYZ    = circOrbitXYZ(r2, theta);
@@ -433,12 +407,6 @@ function SatelliteOrbitVisualizer()
             data.burnPt2 = data.transferXYZ(:,end)';  % apogee  (-X side)
             data.burnPt3 = [NaN NaN NaN];
 
-            % FIX 1: Animation path ----------------------------------------
-            % Previous version used linspace(pi, 2*pi) for the lead-in,
-            % which traversed the lower (negative-Y) half of orbit 1 and
-            % made the satellite appear to dive toward Earth.
-            % Now: start ~90 deg before the burn point on orbit 1 so the
-            % lead-in is a smooth quarter-arc arriving at +X (angle=0).
             nLeadIn   = 55;   % ~quarter arc on orbit 1
             nFinalArc = 80;   % half arc on orbit 2
             p1 = circOrbitXYZ(r1, linspace(-pi/2, 0, nLeadIn));
@@ -446,9 +414,7 @@ function SatelliteOrbitVisualizer()
             p3 = circOrbitXYZ(r2, linspace(0, pi, nFinalArc));
             data.animPath = [p1, p2, p3]';   % Nx3
 
-        % ------------------------------------------------------------------
         else  % BiElliptic
-        % ------------------------------------------------------------------
             rb  = rb_fac_ * r2;    % intermediate apogee radius
 
             at1 = (r1 + rb) / 2;  % SMA of 1st transfer ellipse
@@ -479,7 +445,7 @@ function SatelliteOrbitVisualizer()
             data.epsilon2 = -mu_/(2*r2);
             data.epsilonT = -mu_/(2*at1);
 
-            % --- Geometry --------------------------------------------------
+            % Geometry
             theta = linspace(0, 2*pi, 360);
             data.orbit1XYZ = circOrbitXYZ(r1, theta);
             data.orbit2XYZ = circOrbitXYZ(r2, theta);
@@ -487,13 +453,7 @@ function SatelliteOrbitVisualizer()
             % 1st arc: r1 (perigee, nu=0) -> rb (apogee, nu=pi)
             data.transferXYZ = ellipseArcXYZ(r1, rb, at1, linspace(0, pi, 220));
 
-            % FIX 2: 2nd arc  ----------------------------------------------
-            % This ellipse has periapsis at r2 and apoapsis at rb.
-            % The satellite enters at rb (apoapsis, nu=pi) and descends to
-            % r2 (periapsis, nu=2*pi).  So nu must run pi -> 2*pi.
-            % Previous code used linspace(pi, 2*pi) but had rp and ra
-            % ambiguity; the corrected call is:
-            %   rp = r2  (smaller), ra = rb  (larger), nu: pi -> 2*pi
+
             data.transfer2XYZ = ellipseArcXYZ(r2, rb, at2, linspace(pi, 2*pi, 220));
 
             % Burn markers
@@ -521,9 +481,7 @@ function SatelliteOrbitVisualizer()
         data.hohmann_dV = abs(vtp_h - vc1) + abs(vc2 - vta_h);
     end
 
-    % =========================================================================
     %  TRAJECTORY HELPERS
-    % =========================================================================
 
     function xyz = circOrbitXYZ(r, theta)
     % 3xN array of points on a circular orbit of radius r in the XY plane.
@@ -546,9 +504,7 @@ function SatelliteOrbitVisualizer()
         xyz = [r.*cos(nu_vec); r.*sin(nu_vec); zeros(size(nu_vec))];
     end
 
-    % =========================================================================
     %  DRAWING
-    % =========================================================================
 
     function drawOrbits(data)
     % Updates all line-handle XYZ data and repositions burn markers.
@@ -611,9 +567,7 @@ function SatelliteOrbitVisualizer()
         drawnow limitrate;
     end
 
-    % =========================================================================
     %  MISSION METRICS OVERLAY
-    % =========================================================================
 
     function updateOverlay(data)
         tt_hr = data.tt / 3600;
@@ -668,9 +622,7 @@ function SatelliteOrbitVisualizer()
         set(gh.overlayText,'String',lines);
     end
 
-    % =========================================================================
     %  ANIMATION
-    % =========================================================================
 
     function animateTransfer(data)
     % Steps the satellite marker along the pre-computed animation path.
